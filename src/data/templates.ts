@@ -2,6 +2,126 @@ import { TemplateDoc } from '../types';
 
 export const DOCUMENT_TEMPLATES: TemplateDoc[] = [
   {
+    id: 'strategic-blueprint',
+    title: 'Institutional Strategic Blueprint & Educational Roadmap',
+    category: 'Education & Strategy',
+    description: 'Executive blueprint with Part banners, Table of Contents, page breaks, paradigm comparison diagrams, and priority action matrices.',
+    defaultThemeId: 'corporate-navy',
+    htmlContent: `<h1>INSTITUTIONAL STRATEGIC BLUEPRINT 2026–2030</h1>
+<p><strong>Institution:</strong> AlKawthar International School &nbsp;|&nbsp; <strong>Author:</strong> Strategic Transformation Office &nbsp;|&nbsp; <strong>Edition:</strong> Comprehensive Executive Plan</p>
+<hr />
+
+<div class="part-banner page-break" style="page-break-before: always; break-before: page; margin: 24pt 0 18pt 0; border: 2pt solid #1E3A8A; border-radius: 8pt; overflow: hidden; background-color: #FFFFFF;">
+  <div style="background-color: #1E3A8A; color: #FFFFFF; padding: 14pt 18pt; text-align: center;">
+    <div style="font-size: 11pt; font-weight: 800; letter-spacing: 0.1em; color: #93C5FD; text-transform: uppercase; margin-bottom: 2pt;">PART I</div>
+    <div style="font-size: 15pt; font-weight: 700;">STRATEGIC CONTEXT &amp; INSTITUTIONAL REVIEW</div>
+  </div>
+  <div style="padding: 12pt 18pt; background-color: #F8FAFC;">
+    <div style="font-size: 8.5pt; font-weight: 700; color: #64748B; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8pt;">TABLE OF CONTENTS / KEY CHAPTERS</div>
+    <table style="width: 100%; border-collapse: collapse; border: none;">
+      <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 6pt 4pt; font-weight: 600; color: #1E3A8A; width: 30px; font-size: 9.5pt;">01.</td><td style="padding: 6pt 4pt; color: #1E293B; font-size: 9.5pt;">Chapter 1: Educational Vision, Strategic Context and Blueprint Purpose</td></tr>
+      <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 6pt 4pt; font-weight: 600; color: #1E3A8A; width: 30px; font-size: 9.5pt;">02.</td><td style="padding: 6pt 4pt; color: #1E293B; font-size: 9.5pt;">Chapter 2: Saudi Vision 2030, HCDP and International Competitiveness</td></tr>
+      <tr style="border-bottom: 1px solid #E2E8F0;"><td style="padding: 6pt 4pt; font-weight: 600; color: #1E3A8A; width: 30px; font-size: 9.5pt;">03.</td><td style="padding: 6pt 4pt; color: #1E293B; font-size: 9.5pt;">Chapter 3: Comprehensive Institutional Review: Strengths &amp; Growth Vectors</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="page-break" style="page-break-before: always; break-before: page;"></div>
+
+<h1>Chapter 1: Educational Vision, Strategic Context &amp; Paradigm Shift</h1>
+<p>The institutional imperative demands a fundamental shift from traditional instructional methods toward an inquiry-driven, globally competitive learning ecosystem.</p>
+
+<div class="comparison-diagram" style="margin: 18pt 0; width: 100%;">
+  <table style="width: 100%; border-collapse: separate; border-spacing: 12pt 0; border: none;">
+    <thead>
+      <tr>
+        <th style="width: 46%; background-color: #F1F5F9; color: #334155; border: 1.5pt solid #CBD5E1; border-radius: 6pt; padding: 10pt; text-align: center; font-size: 11pt; font-weight: 700;">
+          HISTORIC PARADIGM
+        </th>
+        <th style="width: 8%; background: transparent; border: none; text-align: center; font-size: 16pt; color: #2563EB; vertical-align: middle;">
+          ➔
+        </th>
+        <th style="width: 46%; background-color: #EFF6FF; color: #1E3A8A; border: 1.5pt solid #3B82F6; border-radius: 6pt; padding: 10pt; text-align: center; font-size: 11pt; font-weight: 700;">
+          21ST CENTURY KIS PARADIGM
+        </th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="background-color: #F8FAFC; border: 1pt solid #E2E8F0; border-radius: 6pt; padding: 12pt; vertical-align: top;">
+          <ul style="margin: 0; padding-left: 14pt; color: #475569; font-size: 9.5pt; line-height: 1.6;">
+            <li>Rote Memorization &amp; Recall</li>
+            <li>Passive Content Reception</li>
+            <li>Isolated Subject Silos</li>
+            <li>Single-Point Summative Exams</li>
+          </ul>
+        </td>
+        <td style="border: none;"></td>
+        <td style="background-color: #F0FDF4; border: 1pt solid #86EFAC; border-radius: 6pt; padding: 12pt; vertical-align: top;">
+          <ul style="margin: 0; padding-left: 14pt; color: #166534; font-size: 9.5pt; line-height: 1.6; font-weight: 500;">
+            <li>✓ Deep Conceptual Understanding</li>
+            <li>✓ Adaptive Reasoning &amp; Inquiry</li>
+            <li>✓ Cross-Disciplinary Synthesis</li>
+            <li>✓ Continuous Authentic Assessment</li>
+          </ul>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="page-break" style="page-break-before: always; break-before: page;"></div>
+
+<h1>Chapter 2: Institutional Improvement Priorities</h1>
+<p>To establish institutional excellence, executive leadership has identified eight high-impact priority pillars:</p>
+
+<div class="priority-box" style="margin: 16pt 0; border: 1.5pt solid #2563EB; border-radius: 8pt; overflow: hidden; background-color: #FFFFFF;">
+  <div style="background-color: #1E3A8A; color: #FFFFFF; padding: 10pt 14pt; font-weight: 700; font-size: 11pt; text-transform: uppercase;">
+    📌 TOP 8 INSTITUTIONAL IMPROVEMENT PRIORITIES
+  </div>
+  <div style="padding: 10pt 14pt;">
+    <table style="width: 100%; border-collapse: collapse; border: none;">
+      <tr style="border-bottom: 1px solid #F1F5F9;">
+        <td style="width: 32px; vertical-align: top; padding: 8pt 4pt 8pt 0;">
+          <span style="display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; background-color: #DBEAFE; color: #1E40AF; font-size: 9pt; font-weight: 700;">1</span>
+        </td>
+        <td style="vertical-align: top; padding: 8pt 4pt; font-size: 9.5pt; color: #1E293B;">
+          <strong style="color: #0F172A; text-transform: uppercase;">CURRICULAR HARMONIZATION</strong>
+          <div style="color: #475569; margin-top: 2pt;">Construct unified KG-Y6 English curriculum seamlessly mapped to international benchmarks and MoE requirements.</div>
+        </td>
+      </tr>
+      <tr style="border-bottom: 1px solid #F1F5F9;">
+        <td style="width: 32px; vertical-align: top; padding: 8pt 4pt 8pt 0;">
+          <span style="display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; background-color: #DBEAFE; color: #1E40AF; font-size: 9pt; font-weight: 700;">2</span>
+        </td>
+        <td style="vertical-align: top; padding: 8pt 4pt; font-size: 9.5pt; color: #1E293B;">
+          <strong style="color: #0F172A; text-transform: uppercase;">INSTRUCTIONAL EXCELLENCE</strong>
+          <div style="color: #475569; margin-top: 2pt;">Deploy the 5-Phase KIS Teaching Model across all classrooms to foster critical thinking and active student discourse.</div>
+        </td>
+      </tr>
+      <tr style="border-bottom: 1px solid #F1F5F9;">
+        <td style="width: 32px; vertical-align: top; padding: 8pt 4pt 8pt 0;">
+          <span style="display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; background-color: #DBEAFE; color: #1E40AF; font-size: 9pt; font-weight: 700;">3</span>
+        </td>
+        <td style="vertical-align: top; padding: 8pt 4pt; font-size: 9.5pt; color: #1E293B;">
+          <strong style="color: #0F172A; text-transform: uppercase;">INTEGRATED ASSESSMENT FRAMEWORK</strong>
+          <div style="color: #475569; margin-top: 2pt;">Deploy balanced formative and summative tracking dashboards with standardized grade-level rubrics.</div>
+        </td>
+      </tr>
+      <tr style="border-bottom: 1px solid #F1F5F9;">
+        <td style="width: 32px; vertical-align: top; padding: 8pt 4pt 8pt 0;">
+          <span style="display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; background-color: #DBEAFE; color: #1E40AF; font-size: 9pt; font-weight: 700;">4</span>
+        </td>
+        <td style="vertical-align: top; padding: 8pt 4pt; font-size: 9.5pt; color: #1E293B;">
+          <strong style="color: #0F172A; text-transform: uppercase;">PROFESSIONAL FACULTY DEVELOPMENT</strong>
+          <div style="color: #475569; margin-top: 2pt;">Implement 60 annual hours of certified pedagogical and leadership coaching for instructional staff.</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>`
+  },
+  {
     id: 'annual-report',
     title: 'Annual Activity & Performance Report',
     category: 'Business & Finance',

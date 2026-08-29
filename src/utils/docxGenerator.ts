@@ -8,6 +8,7 @@ import {
   Header,
   Footer,
   PageNumber,
+  PageBreak,
   AlignmentType,
   HeadingLevel,
   UnderlineType,
@@ -370,10 +371,25 @@ function parseNode(
   const element = node as HTMLElement;
   const tagName = element.tagName.toLowerCase();
 
+  // Explicit Page Break (.page-break or style="page-break-before: always")
+  if (
+    element.classList.contains('page-break') ||
+    element.getAttribute('style')?.includes('page-break') ||
+    element.getAttribute('style')?.includes('break-before')
+  ) {
+    // If it's a wrapper container with children, render children with first child having pageBreakBefore
+    if (element.children.length === 0) {
+      return new Paragraph({
+        children: [new PageBreak()],
+      });
+    }
+  }
+
   // Headings
   if (/^h[1-6]$/.test(tagName)) {
     const level = parseInt(tagName[1], 10);
     const textRuns = parseInlineFormatting(element, settings);
+    const headingText = element.textContent?.trim() || '';
 
     let fontSizePt = settings.typography.baseFontSizePt;
     let headingLevel: (typeof HeadingLevel)[keyof typeof HeadingLevel] = HeadingLevel.HEADING_1;
@@ -420,8 +436,17 @@ function parseNode(
       return r;
     });
 
+    // Check if heading should start on a new page (Chapter / Part / H1)
+    const isChapter = /^CHAPTER\s+\d+|^CHAPITRE\s+\d+|^PART\s+[I|V|X|\d]+|^TABLE OF CONTENTS|^TABLE DES MATIÈRES/i.test(headingText);
+    const shouldBreakBefore =
+      element.classList.contains('page-break') ||
+      element.getAttribute('style')?.includes('page-break') ||
+      (level === 1 && settings.pageBreaks?.breakBeforeH1 !== false) ||
+      (isChapter && settings.pageBreaks?.breakBeforePart !== false);
+
     return new Paragraph({
       heading: headingLevel,
+      pageBreakBefore: shouldBreakBefore,
       children: runsWithHeadingFont,
       spacing: {
         before: spacingBefore,

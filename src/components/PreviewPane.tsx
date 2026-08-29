@@ -139,25 +139,26 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
             }}
             className="shadow-2xl rounded-xs flex flex-col justify-between relative text-slate-900 print:shadow-none print:m-0"
           >
-            {/* Embedded Dynamic Style Tag to style HTML elements (Headings, Tables, Lists, Callouts) matching Word output */}
+            {/* Embedded Dynamic Style Tag to style HTML elements (Headings, Tables, Lists, Callouts, Diagrams, Page Breaks) matching Word output */}
             <style>{`
               #a4-document-sheet h1 {
                 font-family: "${settings.typography.headingFont}", sans-serif;
                 font-size: ${settings.typography.h1SizePt}pt;
                 font-weight: 700;
                 color: ${settings.theme.primary};
-                margin-top: 18pt;
-                margin-bottom: 9pt;
+                margin-top: 24pt;
+                margin-bottom: 12pt;
                 line-height: 1.25;
                 letter-spacing: -0.015em;
+                ${settings.pageBreaks?.breakBeforeH1 !== false ? 'break-before: page; page-break-before: always;' : ''}
               }
               #a4-document-sheet h2 {
                 font-family: "${settings.typography.headingFont}", sans-serif;
                 font-size: ${settings.typography.h2SizePt}pt;
                 font-weight: 700;
                 color: ${settings.theme.secondary};
-                margin-top: 14pt;
-                margin-bottom: 7pt;
+                margin-top: 18pt;
+                margin-bottom: 8pt;
                 line-height: 1.3;
               }
               #a4-document-sheet h3 {
@@ -165,8 +166,8 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
                 font-size: ${settings.typography.h3SizePt}pt;
                 font-weight: 600;
                 color: ${settings.theme.headingColor};
-                margin-top: 10pt;
-                margin-bottom: 5pt;
+                margin-top: 12pt;
+                margin-bottom: 6pt;
                 line-height: 1.35;
               }
               #a4-document-sheet p {
@@ -188,11 +189,11 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
                 border: 0;
                 height: 1.5pt;
                 background-color: ${settings.theme.accent};
-                margin: 12pt 0 14pt 0;
+                margin: 14pt 0 16pt 0;
               }
               #a4-document-sheet blockquote {
-                margin: 10pt 0;
-                padding: 6pt 10pt;
+                margin: 12pt 0;
+                padding: 8pt 12pt;
                 border-left: 3.5pt solid ${settings.theme.primary};
                 background-color: ${settings.theme.calloutInfoBg};
                 font-style: italic;
@@ -200,8 +201,8 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
                 border-radius: 0 4pt 4pt 0;
               }
               #a4-document-sheet .callout, #a4-document-sheet .alert {
-                margin: 10pt 0;
-                padding: 8pt 12pt;
+                margin: 12pt 0;
+                padding: 10pt 14pt;
                 border-left: 4pt solid ${settings.theme.calloutInfoBorder};
                 border-top: 1px solid ${settings.theme.tableBorder};
                 border-right: 1px solid ${settings.theme.tableBorder};
@@ -209,6 +210,50 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
                 background-color: ${settings.theme.calloutInfoBg};
                 border-radius: 0 6pt 6pt 0;
               }
+
+              /* Page Breaks */
+              #a4-document-sheet .page-break {
+                break-before: page;
+                page-break-before: always;
+                margin: 24pt 0 16pt 0;
+                position: relative;
+                height: 1px;
+                border-top: 2px dashed #94A3B8;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              #a4-document-sheet .page-break::after {
+                content: "✂ PAGE BREAK — NEW PAGE";
+                position: absolute;
+                background-color: #F1F5F9;
+                color: #64748B;
+                padding: 2px 10px;
+                font-size: 8pt;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                border-radius: 9999px;
+                border: 1px solid #CBD5E1;
+              }
+
+              @media print {
+                #a4-document-sheet .page-break {
+                  border: none !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  height: 0 !important;
+                }
+                #a4-document-sheet .page-break::after {
+                  display: none !important;
+                }
+              }
+
+              /* Part / Chapter Banners */
+              #a4-document-sheet .part-banner {
+                break-before: page;
+                page-break-before: always;
+              }
+
               #a4-document-sheet ul {
                 list-style-type: disc;
                 margin-left: 18pt;
@@ -225,7 +270,7 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
               #a4-document-sheet table {
                 width: 100%;
                 border-collapse: collapse;
-                margin: 12pt 0;
+                margin: 14pt 0;
                 font-size: ${settings.typography.baseFontSizePt - 1}pt;
               }
               #a4-document-sheet th {

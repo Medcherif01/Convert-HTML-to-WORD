@@ -465,6 +465,75 @@ export const SettingsSidebar: React.FC<SettingsSidebarProps> = ({
                 </div>
               </div>
             </div>
+
+            {/* Chapters & Pagination Rules */}
+            <div className="pt-3 border-t border-slate-800 space-y-3">
+              <label className="block text-xs font-semibold text-white uppercase tracking-wider">
+                Chapters &amp; Page Breaks
+              </label>
+
+              <div className="space-y-2">
+                <label className="flex items-center justify-between p-2.5 bg-slate-800/60 rounded-lg border border-slate-800 cursor-pointer hover:bg-slate-800">
+                  <div className="pr-2">
+                    <span className="text-xs font-medium text-slate-200 block">Start Chapters (H1) on New Page</span>
+                    <span className="text-[10px] text-slate-400">Forces each main Chapter heading to begin on a fresh page</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={settings.pageBreaks?.breakBeforeH1 !== false}
+                    onChange={(e) =>
+                      onUpdateSettings({
+                        pageBreaks: {
+                          ...settings.pageBreaks,
+                          breakBeforeH1: e.target.checked,
+                        },
+                      })
+                    }
+                    className="rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-2.5 bg-slate-800/60 rounded-lg border border-slate-800 cursor-pointer hover:bg-slate-800">
+                  <div className="pr-2">
+                    <span className="text-xs font-medium text-slate-200 block">Start Parts &amp; Major Sections on New Page</span>
+                    <span className="text-[10px] text-slate-400">PART I / Sections start on a new page</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={settings.pageBreaks?.breakBeforePart !== false}
+                    onChange={(e) =>
+                      onUpdateSettings({
+                        pageBreaks: {
+                          ...settings.pageBreaks,
+                          breakBeforePart: e.target.checked,
+                        },
+                      })
+                    }
+                    className="rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-2.5 bg-slate-800/60 rounded-lg border border-slate-800 cursor-pointer hover:bg-slate-800">
+                  <div className="pr-2">
+                    <span className="text-xs font-medium text-slate-200 block">Page Break after Table of Contents</span>
+                    <span className="text-[10px] text-slate-400">Isolates Table of Contents on its own page</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={settings.pageBreaks?.breakAfterToc !== false}
+                    onChange={(e) =>
+                      onUpdateSettings({
+                        pageBreaks: {
+                          ...settings.pageBreaks,
+                          breakAfterToc: e.target.checked,
+                        },
+                      })
+                    }
+                    className="rounded bg-slate-900 border-slate-700 text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
+                  />
+                </label>
+              </div>
+            </div>
           </div>
         )}
 

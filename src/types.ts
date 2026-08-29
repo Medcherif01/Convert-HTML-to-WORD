@@ -73,6 +73,13 @@ export interface HeaderFooterSettings {
   differentFirstPage: boolean;
 }
 
+export interface PageBreakSettings {
+  breakBeforeH1: boolean; // Start each Chapter (H1) on a new page
+  breakBeforePart: boolean; // Start PART / Major Section on a new page
+  breakAfterToc: boolean; // Page break after Table of Contents
+  showVisualPageBreaks: boolean; // Show visual divider line in preview
+}
+
 export interface DocumentSettings {
   title: string;
   fileName: string;
@@ -83,6 +90,7 @@ export interface DocumentSettings {
   theme: ColorTheme;
   tables: TableSettings;
   headerFooter: HeaderFooterSettings;
+  pageBreaks: PageBreakSettings;
 }
 
 export interface TemplateDoc {

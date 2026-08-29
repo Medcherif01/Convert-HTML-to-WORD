@@ -66,6 +66,12 @@ const DEFAULT_SETTINGS: DocumentSettings = {
 
     differentFirstPage: false,
   },
+  pageBreaks: {
+    breakBeforeH1: true,
+    breakBeforePart: true,
+    breakAfterToc: true,
+    showVisualPageBreaks: true,
+  },
 };
 
 export default function App() {
