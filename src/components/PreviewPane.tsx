@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { DocumentSettings } from '../types';
+import { sanitizeAndEnhanceHtml } from '../utils/htmlParser';
 
 interface PreviewPaneProps {
   htmlContent: string;
@@ -223,35 +224,52 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
               #a4-document-sheet .page-break {
                 break-before: page;
                 page-break-before: always;
-                margin: 24pt 0 16pt 0;
+              }
+
+              /* Visual divider line only for empty page break divider tags */
+              #a4-document-sheet div.page-break:empty,
+              #a4-document-sheet hr.page-break,
+              #a4-document-sheet .page-break-divider {
+                break-before: page;
+                page-break-before: always;
+                margin: 20pt 0 16pt 0;
                 position: relative;
                 height: 1px;
-                border-top: 2px dashed #94A3B8;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                border-top: 1.5px dashed #94A3B8;
+                display: block;
+                clear: both;
               }
-              #a4-document-sheet .page-break::after {
+              #a4-document-sheet div.page-break:empty::after,
+              #a4-document-sheet hr.page-break::after,
+              #a4-document-sheet .page-break-divider::after {
                 content: "✂ PAGE BREAK — NEW PAGE";
                 position: absolute;
-                background-color: #F1F5F9;
+                top: -8pt;
+                left: 50%;
+                transform: translateX(-50%);
+                background-color: #F8FAFC;
                 color: #64748B;
-                padding: 2px 10px;
-                font-size: 8pt;
+                padding: 1px 8px;
+                font-size: 7.5pt;
                 font-weight: 700;
                 letter-spacing: 0.08em;
                 border-radius: 9999px;
                 border: 1px solid #CBD5E1;
+                white-space: nowrap;
               }
 
               @media print {
-                #a4-document-sheet .page-break {
+                #a4-document-sheet div.page-break:empty,
+                #a4-document-sheet hr.page-break,
+                #a4-document-sheet .page-break-divider {
                   border: none !important;
                   margin: 0 !important;
                   padding: 0 !important;
                   height: 0 !important;
                 }
-                #a4-document-sheet .page-break::after {
+                #a4-document-sheet div.page-break:empty::after,
+                #a4-document-sheet hr.page-break::after,
+                #a4-document-sheet .page-break-divider::after {
                   display: none !important;
                 }
               }
@@ -260,19 +278,39 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
               #a4-document-sheet .part-banner {
                 break-before: page;
                 page-break-before: always;
+                margin: 20pt 0 16pt 0;
+                border: 2pt solid ${settings.theme.primary};
+                border-radius: 8pt;
+                overflow: hidden;
               }
 
               /* Executive Diagrams & Figures */
               #a4-document-sheet .diagram-converging,
               #a4-document-sheet .diagram-streams-matrix,
+              #a4-document-sheet .diagram-tier-engine,
+              #a4-document-sheet .diagram-stage-cycle,
               #a4-document-sheet .comparison-diagram,
               #a4-document-sheet .priority-box {
                 break-inside: avoid;
                 page-break-inside: avoid;
                 margin: 18pt 0;
+                clear: both;
+              }
+
+              #a4-document-sheet .diagram-converging table,
+              #a4-document-sheet .diagram-streams-matrix table,
+              #a4-document-sheet .diagram-stage-cycle table,
+              #a4-document-sheet .comparison-diagram table {
+                margin: 0 !important;
+                border: none !important;
               }
 
               #a4-document-sheet .diagram-converging table td,
+              #a4-document-sheet .diagram-converging table th,
+              #a4-document-sheet .diagram-streams-matrix table td,
+              #a4-document-sheet .diagram-streams-matrix table th,
+              #a4-document-sheet .diagram-stage-cycle table td,
+              #a4-document-sheet .diagram-stage-cycle table th,
               #a4-document-sheet .comparison-diagram table td,
               #a4-document-sheet .comparison-diagram table th {
                 border-color: inherit;
@@ -372,7 +410,9 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
             {/* Document Body (Rendered HTML) */}
             <div
               className="flex-1 w-full"
-              dangerouslySetInnerHTML={{ __html: htmlContent || '<p><em>Empty document.</em></p>' }}
+              dangerouslySetInnerHTML={{
+                __html: sanitizeAndEnhanceHtml(htmlContent) || '<p><em>Empty document.</em></p>',
+              }}
             />
 
             {/* Document Footer Section */}

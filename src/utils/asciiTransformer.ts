@@ -9,136 +9,413 @@ export interface DiagramConversionResult {
 }
 
 /**
- * Checks if a string or block contains ASCII table/box/diagram structures
+ * Checks if a string or block contains ASCII table/box/diagram structures or multi-stage processes
  */
 export function hasAsciiArtOrDiagram(text: string): boolean {
   if (!text) return false;
   const hasBoxBorders = /^\+[-=]{3,}\+/m.test(text);
   const hasPipesAndDashes = /\|.*\|/.test(text) && /[-=]{4,}/.test(text);
   const hasFlowArrows = /(\\\s*\/|\/\s*\\|===>|<===|--->|<---|-->|<--|───>|<───)/.test(text);
-  const hasConvergingPattern = (text.includes('\\') && text.includes('/') && (text.includes('--->') || text.includes('<---') || text.includes('===>') || text.includes('ECOSYSTEM') || text.includes('INTEGRATED')));
-  return hasBoxBorders || hasPipesAndDashes || hasFlowArrows || hasConvergingPattern;
+  const hasConvergingPattern = text.includes('\\') && text.includes('/') && (text.includes('--->') || text.includes('<---') || text.includes('===>') || text.includes('ECOSYSTEM') || text.includes('INTEGRATED'));
+  const hasTierPattern = /(?:3-TIER|MULTI-TIER|TIER 1|TIER 2|TIER 3)/i.test(text) && (text.includes('TIER 1') || text.includes('TIER 2'));
+  const hasStagePattern = /(?:STAGE 1|STAGE 2|STAGE 3|STAGE 4|COACHING CYCLE|INSTRUCTIONAL COACHING)/i.test(text) && (text.includes('STAGE 1') || text.includes('STAGE 2'));
+  return hasBoxBorders || hasPipesAndDashes || hasFlowArrows || hasConvergingPattern || hasTierPattern || hasStagePattern;
 }
 
 /**
- * Transforms ASCII diagrams and tables in text while strictly preserving all surrounding text and lines.
+ * Transforms ASCII diagrams and multi-tier / multi-stage processes while strictly preserving all surrounding text,
+ * paragraphs, and headings in their exact natural order.
  */
 export function transformAsciiAndDiagramsToHtml(rawText: string): string {
   if (!rawText) return rawText;
 
   const lines = rawText.split(/\r?\n/);
-  const resultBlocks: string[] = [];
-  let currentBlock: string[] = [];
-  let inDiagramBlock = false;
+  const totalLines = lines.length;
+  const processedBlocks: string[] = [];
 
-  const flushCurrentBlock = () => {
-    if (currentBlock.length === 0) return;
-    const blockText = currentBlock.join('\n');
-    if (inDiagramBlock && isAsciiOrDiagramBlock(blockText)) {
-      const converted = convertAsciiBlockToHtml(blockText);
-      resultBlocks.push(converted);
-    } else {
-      resultBlocks.push(blockText);
-    }
-    currentBlock = [];
-    inDiagramBlock = false;
-  };
-
-  for (let i = 0; i < lines.length; i++) {
+  let i = 0;
+  while (i < totalLines) {
     const line = lines[i];
-    const isBorderLine = /^\s*\+[-=+]{3,}\+\s*$/.test(line);
-    const isPipeLine = /^\s*\|.*\|\s*$/.test(line);
-    const isDiagramArrow = /===>|<===|--->|<---|-->|<--|───>|<───|\\\s*\/|\/\s*\\/.test(line);
-    const isConvergingSlash = /^\s*(\\|\/|\s)+\s*(--->|<---|===>)?/.test(line) && (line.includes('\\') || line.includes('/'));
+    const trimmed = line.trim();
 
-    if (isBorderLine || (isPipeLine && inDiagramBlock) || isDiagramArrow || isConvergingSlash) {
-      inDiagramBlock = true;
-      currentBlock.push(line);
-    } else if (inDiagramBlock && line.trim() === '') {
-      flushCurrentBlock();
-      resultBlocks.push('');
-    } else {
-      if (inDiagramBlock) {
-        // If line is part of a converging diagram bottom text (e.g. parentheses or continuation)
-        if (/^\s*\(|\b(ECOSYSTEM|FRAMEWORK|INTEGRATED|CURRICULUM|MODEL|APPROACH|SYSTEM|PROGRAM)\b/i.test(line)) {
-          currentBlock.push(line);
-          continue;
-        }
-        flushCurrentBlock();
-      }
-      currentBlock.push(line);
+    // 1. Check if line starts a Converging Diagram (lookahead check)
+    const convergingRange = detectConvergingDiagramRange(lines, i);
+    if (convergingRange) {
+      const diagramLines = lines.slice(convergingRange.start, convergingRange.end + 1);
+      const html = transformConvergingDiagram(diagramLines.join('\n'));
+      processedBlocks.push(html);
+      i = convergingRange.end + 1;
+      continue;
     }
+
+    // 2. Check for 3-Tier Data Engine / Tiered Architecture
+    const tierRange = detectTierEngineRange(lines, i);
+    if (tierRange) {
+      const tierLines = lines.slice(tierRange.start, tierRange.end + 1);
+      processedBlocks.push(transformTierEngineDiagram(tierLines.join('\n')));
+      i = tierRange.end + 1;
+      continue;
+    }
+
+    // 3. Check for 4-Stage Instructional Coaching Cycle / Process Flow
+    const stageRange = detectStageCycleRange(lines, i);
+    if (stageRange) {
+      const stageLines = lines.slice(stageRange.start, stageRange.end + 1);
+      processedBlocks.push(transformStageCycleDiagram(stageLines.join('\n')));
+      i = stageRange.end + 1;
+      continue;
+    }
+
+    // 4. Check if line starts a Spanning Header Matrix / Box (Image 2 - Audit Streams)
+    const boxMatrixRange = detectBoxTableRange(lines, i);
+    if (boxMatrixRange) {
+      const matrixLines = lines.slice(boxMatrixRange.start, boxMatrixRange.end + 1);
+      const blockText = matrixLines.join('\n');
+      if (isSpanningHeaderMatrix(blockText)) {
+        processedBlocks.push(transformSpanningHeaderMatrix(blockText));
+      } else if (isComparisonDiagram(blockText)) {
+        processedBlocks.push(transformComparisonDiagram(blockText));
+      } else if (isGridTable(blockText)) {
+        processedBlocks.push(transformGridTable(blockText));
+      } else {
+        processedBlocks.push(transformGenericAsciiTable(blockText));
+      }
+      i = boxMatrixRange.end + 1;
+      continue;
+    }
+
+    // 5. Check for standalone Comparison Diagram (e.g. Historic Paradigm ===> 21st Century)
+    if (trimmed.includes('===>') || trimmed.includes('<===') || (trimmed.includes('-->') && trimmed.includes('|'))) {
+      const compRange = detectComparisonDiagramRange(lines, i);
+      if (compRange) {
+        const compLines = lines.slice(compRange.start, compRange.end + 1);
+        processedBlocks.push(transformComparisonDiagram(compLines.join('\n')));
+        i = compRange.end + 1;
+        continue;
+      }
+    }
+
+    // Normal line - pass through
+    processedBlocks.push(line);
+    i++;
   }
 
-  flushCurrentBlock();
-
-  return resultBlocks.join('\n');
+  return processedBlocks.join('\n');
 }
 
 /**
- * Checks if a specific text block is a genuine ASCII box / diagram
+ * Detects 3-Tier Data Engine / Multi-Tier Framework range
  */
-function isAsciiOrDiagramBlock(text: string): boolean {
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) return false;
+function detectTierEngineRange(lines: string[], currentIdx: number): { start: number; end: number } | null {
+  const line = lines[currentIdx].trim();
+  const isTierTitle = /(?:3-TIER|MULTI-TIER|DATA MONITORING ENGINE|TIERED DATA ARCHITECTURE)/i.test(line);
+  const isTier1 = /^TIER\s+1\b/i.test(line) || /\|\s*TIER\s+1\b/i.test(line);
 
-  let borderCount = 0;
-  let pipeCount = 0;
-  let hasArrows = false;
-  let hasSlashes = false;
+  if (!isTierTitle && !isTier1) return null;
+
+  let startIdx = currentIdx;
+  let endIdx = currentIdx;
+  let hasFoundTiers = isTier1;
+
+  for (let k = currentIdx; k < Math.min(lines.length, currentIdx + 15); k++) {
+    const l = lines[k].trim();
+    if (l === '' && hasFoundTiers) {
+      // Allow one blank line
+      if (k + 1 < lines.length && /(?:TIER\s+\d+|###|\*\*|####)/i.test(lines[k + 1])) {
+        continue;
+      }
+      break;
+    }
+    if (l.startsWith('#') && !l.toLowerCase().includes('tier')) break;
+    if (/(?:TIER\s+1|TIER\s+2|TIER\s+3)/i.test(l)) {
+      hasFoundTiers = true;
+      endIdx = k;
+    } else if (hasFoundTiers && l.length > 0 && !l.startsWith('---') && !l.startsWith('###')) {
+      endIdx = k;
+    }
+  }
+
+  return hasFoundTiers ? { start: startIdx, end: endIdx } : null;
+}
+
+/**
+ * Transforms Multi-Tier Data Monitoring Engine into an executive hierarchical card stack
+ */
+function transformTierEngineDiagram(text: string): string {
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  let mainTitle = '3-TIER DATA MONITORING ENGINE';
+
+  const tiers: { level: string; label: string; desc: string }[] = [];
+  let currentTier: { level: string; label: string; desc: string } | null = null;
 
   for (const line of lines) {
-    if (/^\s*\+[-=+]{3,}\+\s*$/.test(line)) borderCount++;
-    if (/^\s*\|.*\|\s*$/.test(line)) pipeCount++;
-    if (/===>|<===|--->|<---|-->|<--|───>/.test(line)) hasArrows = true;
-    if (line.includes('\\') || line.includes('/')) hasSlashes = true;
+    if (/(?:3-TIER|MULTI-TIER|DATA MONITORING ENGINE)/i.test(line) && !/TIER\s+\d/i.test(line)) {
+      mainTitle = line.replace(/^[#\*\-+|]+|[#\*\-+|]+$/g, '').trim();
+      continue;
+    }
+
+    const tierMatch = line.match(/(?:\||\*\*)?\s*(TIER\s+\d+)\s*[:\-–—]\s*([^(\n]+)(?:\((.*)\)|:\s*(.*))?/i);
+    if (tierMatch) {
+      if (currentTier) tiers.push(currentTier);
+      const level = tierMatch[1].trim();
+      const label = tierMatch[2].replace(/[\*\-+|]/g, '').trim();
+      const desc = (tierMatch[3] || tierMatch[4] || '').replace(/[\*\)\|]/g, '').trim();
+      currentTier = { level, label, desc };
+    } else if (currentTier && !line.startsWith('+') && !line.startsWith('---')) {
+      const cleanLine = line.replace(/^[|*]+|[|*)]+$/g, '').trim();
+      if (cleanLine) {
+        currentTier.desc += (currentTier.desc ? ' ' : '') + cleanLine;
+      }
+    }
   }
 
-  if (borderCount >= 1 && pipeCount >= 1) return true;
-  if (hasArrows && (pipeCount >= 1 || hasSlashes)) return true;
-  if (hasSlashes && hasArrows) return true;
+  if (currentTier) tiers.push(currentTier);
 
-  return false;
+  if (tiers.length === 0) {
+    return transformGenericAsciiTable(text);
+  }
+
+  const tierColors = [
+    { bg: '#EFF6FF', border: '#3B82F6', badge: '#1E40AF', badgeBg: '#DBEAFE', text: '#1E3A8A' },
+    { bg: '#F8FAFC', border: '#64748B', badge: '#334155', badgeBg: '#E2E8F0', text: '#0F172A' },
+    { bg: '#FAF5FF', border: '#A855F7', badge: '#6B21A8', badgeBg: '#F3E8FF', text: '#581C87' },
+  ];
+
+  return `
+<div class="diagram-tier-engine" style="margin: 18pt 0; width: 100%; border: 1.5pt solid #1E3A8A; border-radius: 8pt; overflow: hidden; page-break-inside: avoid;">
+  <div style="background-color: #1E3A8A; color: #FFFFFF; padding: 10pt 16pt; font-size: 11pt; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-align: center;">
+    ${escapeHtml(mainTitle)}
+  </div>
+  <div style="padding: 12pt; background-color: #FFFFFF; display: flex; flex-direction: column; gap: 10pt;">
+    ${tiers
+      .map((t, idx) => {
+        const theme = tierColors[idx % tierColors.length];
+        return `
+    <div style="border: 1.5pt solid ${theme.border}; border-radius: 6pt; background-color: ${theme.bg}; padding: 10pt 14pt; margin-bottom: 8pt;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6pt; border-bottom: 1px solid rgba(0,0,0,0.08); padding-bottom: 4pt;">
+        <span style="background-color: ${theme.badgeBg}; color: ${theme.badge}; font-weight: 800; font-size: 9pt; padding: 2pt 8pt; border-radius: 4pt; text-transform: uppercase; letter-spacing: 0.05em;">
+          ${escapeHtml(t.level)}
+        </span>
+        <span style="font-size: 10pt; font-weight: 700; color: ${theme.text}; text-transform: uppercase;">
+          ${escapeHtml(t.label)}
+        </span>
+      </div>
+      <div style="font-size: 9pt; color: #334155; line-height: 1.55;">
+        ${escapeHtml(t.desc)}
+      </div>
+    </div>`;
+      })
+      .join('')}
+  </div>
+</div>`;
 }
 
 /**
- * Analyzes and converts an ASCII block into an executive HTML table or card
+ * Detects 4-Stage Coaching Cycle / Process Flow range
  */
-export function convertAsciiBlockToHtml(blockText: string): string {
-  const clean = blockText.trim();
+function detectStageCycleRange(lines: string[], currentIdx: number): { start: number; end: number } | null {
+  const line = lines[currentIdx].trim();
+  const isStageTitle = /(?:COACHING CYCLE|INSTRUCTIONAL COACHING|4-STAGE|CYCLE DE COACHING)/i.test(line);
+  const isStage1 = /^STAGE\s+1\b/i.test(line) || /\|\s*STAGE\s+1\b/i.test(line);
 
-  // 1. Check for Converging Flowchart / Integration Architecture (Image 1)
-  if (isConvergingDiagram(clean)) {
-    return transformConvergingDiagram(clean);
+  if (!isStageTitle && !isStage1) return null;
+
+  let startIdx = currentIdx;
+  let endIdx = currentIdx;
+  let hasFoundStages = isStage1;
+
+  for (let k = currentIdx; k < Math.min(lines.length, currentIdx + 18); k++) {
+    const l = lines[k].trim();
+    if (l === '' && hasFoundStages) {
+      if (k + 1 < lines.length && /(?:STAGE\s+\d+|###|\*\*|####)/i.test(lines[k + 1])) {
+        continue;
+      }
+      break;
+    }
+    if (l.startsWith('#') && !l.toLowerCase().includes('stage')) break;
+    if (/(?:STAGE\s+1|STAGE\s+2|STAGE\s+3|STAGE\s+4)/i.test(l)) {
+      hasFoundStages = true;
+      endIdx = k;
+    } else if (hasFoundStages && l.length > 0 && !l.startsWith('---') && !l.startsWith('###')) {
+      endIdx = k;
+    }
   }
 
-  // 2. Check for Multi-column Matrix Card with Spanning Header (Image 2 - Audit Streams)
-  if (isSpanningHeaderMatrix(clean)) {
-    return transformSpanningHeaderMatrix(clean);
-  }
-
-  // 3. Check for Comparison Diagram (Historic vs 21st Century)
-  if (isComparisonDiagram(clean)) {
-    return transformComparisonDiagram(clean);
-  }
-
-  // 4. Check for Multi-column Grid Table
-  if (isGridTable(clean)) {
-    return transformGridTable(clean);
-  }
-
-  // 5. Fallback: Safe ASCII table parser (preserves every row)
-  return transformGenericAsciiTable(clean);
+  return hasFoundStages ? { start: startIdx, end: endIdx } : null;
 }
 
 /**
- * Detects Converging Diagrams (2 sources converging down with arrows/slashes into 1 target ecosystem)
+ * Transforms 4-Stage Coaching Cycle into a horizontal / stacked process flow
  */
-function isConvergingDiagram(text: string): boolean {
-  const hasSlashes = text.includes('\\') || text.includes('/');
-  const hasArrows = /--->|<---|===>|<===|-->|<--/.test(text);
-  const lines = text.split('\n').filter((l) => l.trim().length > 0);
-  return (hasSlashes || hasArrows) && lines.length >= 3;
+function transformStageCycleDiagram(text: string): string {
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
+  let cycleTitle = 'THE INSTRUCTIONAL COACHING CYCLE';
+
+  const stages: { stageNum: string; title: string; desc: string }[] = [];
+  let currentStage: { stageNum: string; title: string; desc: string } | null = null;
+
+  for (const line of lines) {
+    if (/(?:COACHING CYCLE|INSTRUCTIONAL COACHING|PROCESS FLOW)/i.test(line) && !/STAGE\s+\d/i.test(line)) {
+      cycleTitle = line.replace(/^[#\*\-+|]+|[#\*\-+|]+$/g, '').trim();
+      continue;
+    }
+
+    const stageMatch = line.match(/(?:\||\*\*)?\s*(STAGE\s+\d+)\s*[:\-–—]\s*([^(\n]+)(?:\((.*)\)|:\s*(.*))?/i);
+    if (stageMatch) {
+      if (currentStage) stages.push(currentStage);
+      const stageNum = stageMatch[1].trim();
+      const title = stageMatch[2].replace(/[\*\-+|]/g, '').trim();
+      const desc = (stageMatch[3] || stageMatch[4] || '').replace(/[\*\)\|]/g, '').trim();
+      currentStage = { stageNum, title, desc };
+    } else if (currentStage && !line.startsWith('+') && !line.startsWith('---')) {
+      const cleanLine = line.replace(/^[|*]+|[|*)]+$/g, '').trim();
+      if (cleanLine) {
+        currentStage.desc += (currentStage.desc ? ' ' : '') + cleanLine;
+      }
+    }
+  }
+
+  if (currentStage) stages.push(currentStage);
+
+  if (stages.length === 0) {
+    return transformGenericAsciiTable(text);
+  }
+
+  return `
+<div class="diagram-stage-cycle" style="margin: 18pt 0; width: 100%; border: 1.5pt solid #1E3A8A; border-radius: 8pt; overflow: hidden; page-break-inside: avoid;">
+  <div style="background-color: #1E3A8A; color: #FFFFFF; padding: 10pt 16pt; font-size: 11pt; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; text-align: center;">
+    ${escapeHtml(cycleTitle)}
+  </div>
+  <table style="width: 100%; border-collapse: collapse; border: none; background-color: #FFFFFF;">
+    ${stages
+      .map((s, idx) => {
+        const bg = idx % 2 === 1 ? '#F8FAFC' : '#FFFFFF';
+        return `
+    <tr style="background-color: ${bg}; border-bottom: 1px solid #E2E8F0;">
+      <td style="width: 160px; vertical-align: middle; padding: 12pt 14pt; border-right: 1.5pt solid #DBEAFE; background-color: #EFF6FF; text-align: center;">
+        <div style="font-size: 8.5pt; font-weight: 800; color: #1E40AF; text-transform: uppercase; letter-spacing: 0.08em;">
+          ${escapeHtml(s.stageNum)}
+        </div>
+        <div style="font-size: 9.5pt; font-weight: 700; color: #0F172A; margin-top: 2pt;">
+          ${escapeHtml(s.title)}
+        </div>
+      </td>
+      <td style="padding: 12pt 16pt; vertical-align: middle; font-size: 9pt; color: #334155; line-height: 1.55;">
+        ${escapeHtml(s.desc)}
+      </td>
+    </tr>`;
+      })
+      .join('')}
+  </table>
+</div>`;
+}
+
+/**
+ * Detects the full range (start to end line index) of a Converging Diagram
+ * including preceding titles (e.g., SAUDI NATIONAL CURRICULUM ... INTERNATIONAL BENCHMARK)
+ */
+function detectConvergingDiagramRange(lines: string[], currentIdx: number): { start: number; end: number } | null {
+  const line = lines[currentIdx];
+
+  const hasConnectors = /(\\\s*\/|\/\s*\\|--->|<---|===>|<===|-->|<--)/.test(line) && (line.includes('\\') || line.includes('/'));
+
+  let startIdx = currentIdx;
+  let isPotentialPillars = false;
+
+  if (!hasConnectors) {
+    const parts = line.split(/\s{3,}/).map((s) => s.trim()).filter(Boolean);
+    if (parts.length >= 2 && currentIdx + 1 < lines.length) {
+      const next1 = lines[currentIdx + 1];
+      const next2 = currentIdx + 2 < lines.length ? lines[currentIdx + 2] : '';
+      if ((next1.includes('\\') && next1.includes('/')) || (next2.includes('\\') && next2.includes('/'))) {
+        isPotentialPillars = true;
+      }
+    }
+  }
+
+  if (!hasConnectors && !isPotentialPillars) {
+    return null;
+  }
+
+  if (hasConnectors) {
+    let lookBack = currentIdx - 1;
+    while (lookBack >= 0 && lookBack >= currentIdx - 3) {
+      const prevLine = lines[lookBack].trim();
+      if (prevLine === '' || prevLine.startsWith('#') || prevLine.startsWith('+')) {
+        break;
+      }
+      startIdx = lookBack;
+      lookBack--;
+    }
+  }
+
+  let endIdx = currentIdx;
+  let foundEcosystem = false;
+
+  for (let k = currentIdx; k < Math.min(lines.length, currentIdx + 12); k++) {
+    const forwardLine = lines[k].trim();
+    if (forwardLine === '') {
+      if (foundEcosystem) break;
+      continue;
+    }
+    if (forwardLine.startsWith('#') || forwardLine.startsWith('---') || forwardLine.startsWith('+===')) {
+      break;
+    }
+    if (/(ECOSYSTEM|CURRICULUM|FRAMEWORK|INTEGRATED|APPROACH|SYSTEM|PROGRAM)/i.test(forwardLine)) {
+      foundEcosystem = true;
+    }
+    endIdx = k;
+  }
+
+  return { start: startIdx, end: endIdx };
+}
+
+/**
+ * Detects the full range of an ASCII box / grid table
+ */
+function detectBoxTableRange(lines: string[], currentIdx: number): { start: number; end: number } | null {
+  const line = lines[currentIdx].trim();
+  const isTopBorder = /^\+[-=+]{3,}\+$/.test(line);
+
+  if (!isTopBorder) return null;
+
+  let endIdx = currentIdx;
+  for (let k = currentIdx + 1; k < lines.length; k++) {
+    const l = lines[k].trim();
+    if (l === '') break;
+    if (/^\+[-=+]{3,}\+$/.test(l)) {
+      endIdx = k;
+      if (k + 1 < lines.length && lines[k + 1].trim().startsWith('|')) {
+        continue;
+      } else {
+        break;
+      }
+    } else if (l.startsWith('|') && l.endsWith('|')) {
+      endIdx = k;
+    } else {
+      break;
+    }
+  }
+
+  return endIdx > currentIdx ? { start: currentIdx, end: endIdx } : null;
+}
+
+/**
+ * Detects range for comparison diagram
+ */
+function detectComparisonDiagramRange(lines: string[], currentIdx: number): { start: number; end: number } | null {
+  let startIdx = currentIdx;
+  let endIdx = currentIdx;
+
+  for (let k = currentIdx; k < Math.min(lines.length, currentIdx + 15); k++) {
+    const l = lines[k].trim();
+    if (l === '' || l.startsWith('#')) break;
+    if (l.includes('|') || l.includes('===>') || l.includes('--->')) {
+      endIdx = k;
+    }
+  }
+
+  return endIdx >= startIdx ? { start: startIdx, end: endIdx } : null;
 }
 
 /**
@@ -146,8 +423,6 @@ function isConvergingDiagram(text: string): boolean {
  */
 function transformConvergingDiagram(text: string): string {
   const lines = text.split('\n');
-  
-  // Extract top sources (lines before the slashes/arrows)
   const topLines: string[] = [];
   const bottomLines: string[] = [];
   let hitConnectors = false;
@@ -155,7 +430,6 @@ function transformConvergingDiagram(text: string): string {
   for (const line of lines) {
     if (/^\s*(\\|\/|\s)+(--->|<---|===>|<===)?/.test(line) && (line.includes('\\') || line.includes('/') || line.includes('--->') || line.includes('<---'))) {
       hitConnectors = true;
-      // If the line also contains center text between arrows
       const centerMatch = line.match(/(?:--->|===>)\s+(.+?)\s+(?:<---|<===)/);
       if (centerMatch) {
         bottomLines.push(centerMatch[1].trim());
@@ -174,11 +448,10 @@ function transformConvergingDiagram(text: string): string {
     }
   }
 
-  // Parse left and right top sources by splitting on multi-spaces
-  let leftTitle = 'Source Pillar 1';
-  let leftSub = '';
-  let rightTitle = 'Source Pillar 2';
-  let rightSub = '';
+  let leftTitle = 'SAUDI NATIONAL CURRICULUM';
+  let leftSub = 'Statutory Core & Identity';
+  let rightTitle = 'INTERNATIONAL BENCHMARK FRAMEWORK';
+  let rightSub = 'Pedagogy, Progression & Rigour';
 
   if (topLines.length > 0) {
     const firstLine = topLines[0];
@@ -202,9 +475,8 @@ function transformConvergingDiagram(text: string): string {
     }
   }
 
-  // Parse bottom central target
-  let targetTitle = 'INTEGRATED CURRICULUM ECOSYSTEM';
-  let targetSub = '';
+  let targetTitle = 'ALKAWTHAR INTEGRATED CURRICULUM ECOSYSTEM';
+  let targetSub = 'Academically Rigorous, Culturally Grounded, and Globally Competitive KG-Y6';
 
   if (bottomLines.length > 0) {
     const cleanBottom = bottomLines.map((l) => l.trim().replace(/^\||\|$/g, '')).filter(Boolean);
@@ -225,7 +497,7 @@ function transformConvergingDiagram(text: string): string {
         <div style="font-size: 10.5pt; font-weight: 800; color: #1E40AF; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4pt;">
           ${escapeHtml(leftTitle)}
         </div>
-        ${leftSub ? `<div style="font-size: 8.5pt; color: #475569; font-weight: 500; line-height: 1.4;">${escapeHtml(leftSub)}</div>` : ''}
+        ${leftSub ? `<div style="font-size: 8.5pt; color: #475569; font-weight: 500; line-height: 1.4;">(${escapeHtml(leftSub)})</div>` : ''}
       </td>
 
       <!-- Right Pillar -->
@@ -233,7 +505,7 @@ function transformConvergingDiagram(text: string): string {
         <div style="font-size: 10.5pt; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4pt;">
           ${escapeHtml(rightTitle)}
         </div>
-        ${rightSub ? `<div style="font-size: 8.5pt; color: #475569; font-weight: 500; line-height: 1.4;">${escapeHtml(rightSub)}</div>` : ''}
+        ${rightSub ? `<div style="font-size: 8.5pt; color: #475569; font-weight: 500; line-height: 1.4;">(${escapeHtml(rightSub)})</div>` : ''}
       </td>
     </tr>
   </table>
@@ -251,7 +523,7 @@ function transformConvergingDiagram(text: string): string {
     ${
       targetSub
         ? `<div style="padding: 10pt 16pt; color: #334155; font-size: 9.5pt; line-height: 1.5; font-weight: 500; background-color: #FFFFFF;">
-            ${escapeHtml(targetSub)}
+            (${escapeHtml(targetSub)})
            </div>`
         : ''
     }
@@ -294,7 +566,6 @@ function transformSpanningHeaderMatrix(text: string): string {
   const columnData: { title: string; lines: string[] }[] = [];
 
   let foundHeader = false;
-  let columnCount = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -312,7 +583,6 @@ function transformSpanningHeaderMatrix(text: string): string {
 
       if (cells.length >= 2) {
         if (columnData.length === 0) {
-          columnCount = cells.length;
           cells.forEach((cell) => {
             columnData.push({ title: cell, lines: [] });
           });
@@ -369,8 +639,8 @@ function isComparisonDiagram(text: string): boolean {
 
 function transformComparisonDiagram(text: string): string {
   const lines = text.split('\n').filter((l) => l.trim().length > 0);
-  let titleLeft = 'Historic Paradigm';
-  let titleRight = '21st Century Paradigm';
+  let titleLeft = 'Current State / Baseline';
+  let titleRight = 'Target State / Future';
 
   const leftItems: string[] = [];
   const rightItems: string[] = [];

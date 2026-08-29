@@ -23,6 +23,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { DocumentSettings } from '../types';
+import { sanitizeAndEnhanceHtml } from './htmlParser';
 
 /**
  * Strips leading hash and normalizes hex color code for docx (e.g. #1E3A8A -> 1E3A8A)
@@ -44,7 +45,8 @@ function cleanHex(color?: string, fallback: string = '000000'): string {
  */
 export async function generateDocxBlob(htmlContent: string, settings: DocumentSettings): Promise<Blob> {
   const parser = new DOMParser();
-  const doc = parser.parseFromString(htmlContent, 'text/html');
+  const cleanHtml = sanitizeAndEnhanceHtml(htmlContent);
+  const doc = parser.parseFromString(cleanHtml, 'text/html');
   const body = doc.body;
 
   // Page Dimensions

@@ -66,8 +66,8 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
 
   const handleAutoFormatAsciiAndDiagrams = () => {
     if (inputMode === 'html') {
-      const sanitized = sanitizeAndEnhanceHtml(htmlContent);
-      onChangeHtml(prettifyHtml(sanitized));
+      const formatted = convertTextOrMarkdownToHtml(htmlContent);
+      onChangeHtml(prettifyHtml(formatted));
     } else {
       const transformed = transformAsciiAndDiagramsToHtml(rawTextContent);
       onChangeRawText(transformed);
@@ -171,11 +171,12 @@ export const EditorPane: React.FC<EditorPaneProps> = ({
         <div className="flex items-center gap-1.5">
           <button
             onClick={handleAutoFormatAsciiAndDiagrams}
-            title="Auto-transform ASCII tables, boxes & diagrams into executive designs"
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-indigo-600/30 text-indigo-300 hover:bg-indigo-600 hover:text-white border border-indigo-500/40 rounded-md transition font-medium"
+            title="Organiser et réagencer intelligemment tout le document (paragraphes, diagrammes, tableaux, listes)"
+            className="flex items-center gap-1.5 px-3 py-1 text-xs bg-emerald-600/30 text-emerald-300 hover:bg-emerald-600 hover:text-white border border-emerald-500/40 rounded-md transition font-semibold shadow-sm"
           >
             <Wand2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Format ASCII/Diagrams</span>
+            <span className="hidden sm:inline">Organiser le document</span>
+            <span className="sm:hidden">Organiser</span>
           </button>
 
           {inputMode === 'html' && (
