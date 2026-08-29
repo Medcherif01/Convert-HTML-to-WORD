@@ -150,7 +150,15 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
                 margin-bottom: 12pt;
                 line-height: 1.25;
                 letter-spacing: -0.015em;
+              }
+              #a4-document-sheet h1:not(:first-of-type) {
                 ${settings.pageBreaks?.breakBeforeH1 !== false ? 'break-before: page; page-break-before: always;' : ''}
+              }
+              #a4-document-sheet > h1:first-child,
+              #a4-document-sheet > div:first-child h1:first-child {
+                margin-top: 0 !important;
+                break-before: auto !important;
+                page-break-before: auto !important;
               }
               #a4-document-sheet h2 {
                 font-family: "${settings.typography.headingFont}", sans-serif;
@@ -252,6 +260,22 @@ export const PreviewPane: React.FC<PreviewPaneProps> = ({
               #a4-document-sheet .part-banner {
                 break-before: page;
                 page-break-before: always;
+              }
+
+              /* Executive Diagrams & Figures */
+              #a4-document-sheet .diagram-converging,
+              #a4-document-sheet .diagram-streams-matrix,
+              #a4-document-sheet .comparison-diagram,
+              #a4-document-sheet .priority-box {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                margin: 18pt 0;
+              }
+
+              #a4-document-sheet .diagram-converging table td,
+              #a4-document-sheet .comparison-diagram table td,
+              #a4-document-sheet .comparison-diagram table th {
+                border-color: inherit;
               }
 
               #a4-document-sheet ul {

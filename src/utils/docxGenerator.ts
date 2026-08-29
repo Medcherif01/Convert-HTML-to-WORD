@@ -76,7 +76,8 @@ export async function generateDocxBlob(htmlContent: string, settings: DocumentSe
 
   for (let i = 0; i < body.childNodes.length; i++) {
     const node = body.childNodes[i];
-    const parsed = parseNode(node, settings, printableWidthTwip);
+    const isFirst = childrenElements.length === 0;
+    const parsed = parseNode(node, settings, printableWidthTwip, isFirst);
     if (parsed) {
       if (Array.isArray(parsed)) {
         childrenElements.push(...parsed);
@@ -339,13 +340,27 @@ export async function downloadDocx(htmlContent: string, settings: DocumentSettin
   saveAs(blob, fileName);
 }
 
+const BLOCK_TAGS = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'ul', 'ol', 'blockquote', 'pre', 'hr']);
+
+function hasBlockDescendant(element: HTMLElement): boolean {
+  for (let i = 0; i < element.children.length; i++) {
+    const child = element.children[i] as HTMLElement;
+    const tag = child.tagName.toLowerCase();
+    if (BLOCK_TAGS.has(tag) || (tag === 'div' && hasBlockDescendant(child))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Parser for DOM Node to docx elements
  */
 function parseNode(
   node: Node,
   settings: DocumentSettings,
-  printableWidthTwip: number
+  printableWidthTwip: number,
+  isFirstElement: boolean = false
 ): Paragraph | Table | (Paragraph | Table)[] | null {
   if (node.nodeType === Node.TEXT_NODE) {
     const text = node.textContent?.trim();
@@ -377,7 +392,10 @@ function parseNode(
     element.getAttribute('style')?.includes('page-break') ||
     element.getAttribute('style')?.includes('break-before')
   ) {
-    // If it's a wrapper container with children, render children with first child having pageBreakBefore
+    // If it's the very first element in the document, don't insert a blank leading page
+    if (isFirstElement) {
+      return null;
+    }
     if (element.children.length === 0) {
       return new Paragraph({
         children: [new PageBreak()],
@@ -439,17 +457,18 @@ function parseNode(
     // Check if heading should start on a new page (Chapter / Part / H1)
     const isChapter = /^CHAPTER\s+\d+|^CHAPITRE\s+\d+|^PART\s+[I|V|X|\d]+|^TABLE OF CONTENTS|^TABLE DES MATIÈRES/i.test(headingText);
     const shouldBreakBefore =
-      element.classList.contains('page-break') ||
-      element.getAttribute('style')?.includes('page-break') ||
-      (level === 1 && settings.pageBreaks?.breakBeforeH1 !== false) ||
-      (isChapter && settings.pageBreaks?.breakBeforePart !== false);
+      !isFirstElement &&
+      (element.classList.contains('page-break') ||
+        element.getAttribute('style')?.includes('page-break') ||
+        (level === 1 && settings.pageBreaks?.breakBeforeH1 !== false) ||
+        (isChapter && settings.pageBreaks?.breakBeforePart !== false));
 
     return new Paragraph({
       heading: headingLevel,
       pageBreakBefore: shouldBreakBefore,
       children: runsWithHeadingFont,
       spacing: {
-        before: spacingBefore,
+        before: isFirstElement ? 0 : spacingBefore,
         after: spacingAfter,
         line: 280,
       },
@@ -633,19 +652,73 @@ function parseNode(
     return parseTableElement(element, settings, printableWidthTwip);
   }
 
-  // Generic Container (div, section, article)
-  if (tagName === 'div' || tagName === 'section' || tagName === 'article') {
+  // Generic Container (div, section, article, header, footer, aside, main)
+  if (tagName === 'div' || tagName === 'section' || tagName === 'article' || tagName === 'header' || tagName === 'footer' || tagName === 'aside' || tagName === 'main') {
+    // If container has NO block children (only text, spans, formatting), parse as a single coherent paragraph!
+    if (!hasBlockDescendant(element)) {
+      const runs = parseInlineFormatting(element, settings);
+      if (runs.length > 0) {
+        return new Paragraph({
+          children: runs,
+          alignment: getElementAlignment(element),
+          spacing: {
+            after: settings.typography.paragraphSpacingAfterPt * 20,
+            line: Math.round(settings.typography.lineSpacing * 240),
+          },
+        });
+      }
+      return null;
+    }
+
     const elements: (Paragraph | Table)[] = [];
+    let currentInlineNodes: Node[] = [];
+
+    const flushInline = () => {
+      if (currentInlineNodes.length > 0) {
+        const dummy = document.createElement('div');
+        currentInlineNodes.forEach((n) => dummy.appendChild(n.cloneNode(true)));
+        const runs = parseInlineFormatting(dummy, settings);
+        if (runs.length > 0) {
+          elements.push(
+            new Paragraph({
+              children: runs,
+              spacing: {
+                after: settings.typography.paragraphSpacingAfterPt * 20,
+                line: Math.round(settings.typography.lineSpacing * 240),
+              },
+            })
+          );
+        }
+        currentInlineNodes = [];
+      }
+    };
+
     for (let i = 0; i < element.childNodes.length; i++) {
-      const childParsed = parseNode(element.childNodes[i], settings, printableWidthTwip);
-      if (childParsed) {
-        if (Array.isArray(childParsed)) {
-          elements.push(...childParsed);
+      const childNode = element.childNodes[i];
+      if (childNode.nodeType === Node.TEXT_NODE) {
+        if (childNode.textContent?.trim()) {
+          currentInlineNodes.push(childNode);
+        }
+      } else if (childNode.nodeType === Node.ELEMENT_NODE) {
+        const childEl = childNode as HTMLElement;
+        const childTag = childEl.tagName.toLowerCase();
+        if (BLOCK_TAGS.has(childTag) || (childTag === 'div' && hasBlockDescendant(childEl))) {
+          flushInline();
+          const childParsed = parseNode(childEl, settings, printableWidthTwip, isFirstElement && elements.length === 0);
+          if (childParsed) {
+            if (Array.isArray(childParsed)) {
+              elements.push(...childParsed);
+            } else {
+              elements.push(childParsed);
+            }
+          }
         } else {
-          elements.push(childParsed);
+          currentInlineNodes.push(childEl);
         }
       }
     }
+
+    flushInline();
     return elements;
   }
 

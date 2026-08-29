@@ -119,6 +119,94 @@ export const DOCUMENT_TEMPLATES: TemplateDoc[] = [
       </tr>
     </table>
   </div>
+</div>
+
+<div class="page-break" style="page-break-before: always; break-before: page;"></div>
+
+<h1>Chapter 3: Institutional Audit Streams &amp; Quality Matrices</h1>
+<p>The institutional audit encompasses four interconnected streams designed to ensure academic consistency, instructional rigor, and governance compliance:</p>
+
+<div class="diagram-streams-matrix" style="margin: 18pt 0; width: 100%; border: 1.5pt solid #1E3A8A; border-radius: 8pt; overflow: hidden;">
+  <div style="background-color: #1E3A8A; color: #FFFFFF; padding: 10pt 16pt; text-align: center; font-size: 11pt; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;">
+    INSTITUTIONAL AUDIT STREAMS
+  </div>
+  <table style="width: 100%; border-collapse: collapse; border: none; background-color: #FFFFFF;">
+    <tr>
+      <td style="width: 25%; vertical-align: top; padding: 12pt 10pt; border-right: 1px solid #E2E8F0; background-color: #FFFFFF;">
+        <div style="font-size: 9.5pt; font-weight: 700; color: #1E3A8A; text-transform: uppercase; margin-bottom: 6pt; border-bottom: 1.5pt solid #DBEAFE; padding-bottom: 4pt;">
+          1. CURRICULAR AUDIT
+        </div>
+        <div style="font-size: 8.5pt; color: #475569; line-height: 1.5;">
+          Scope, sequencing, and vertical alignment of national/global texts across key stages.
+        </div>
+      </td>
+      <td style="width: 25%; vertical-align: top; padding: 12pt 10pt; border-right: 1px solid #E2E8F0; background-color: #F8FAFC;">
+        <div style="font-size: 9.5pt; font-weight: 700; color: #1E3A8A; text-transform: uppercase; margin-bottom: 6pt; border-bottom: 1.5pt solid #DBEAFE; padding-bottom: 4pt;">
+          2. PEDAGOGIC AUDIT
+        </div>
+        <div style="font-size: 8.5pt; color: #475569; line-height: 1.5;">
+          Classroom observations, instructional routines, and active student engagement strategies.
+        </div>
+      </td>
+      <td style="width: 25%; vertical-align: top; padding: 12pt 10pt; border-right: 1px solid #E2E8F0; background-color: #FFFFFF;">
+        <div style="font-size: 9.5pt; font-weight: 700; color: #1E3A8A; text-transform: uppercase; margin-bottom: 6pt; border-bottom: 1.5pt solid #DBEAFE; padding-bottom: 4pt;">
+          3. ASSESSMENT AUDIT
+        </div>
+        <div style="font-size: 8.5pt; color: #475569; line-height: 1.5;">
+          Validity, frequency, moderation mechanisms, and standardized data utilisation routines.
+        </div>
+      </td>
+      <td style="width: 25%; vertical-align: top; padding: 12pt 10pt; background-color: #F8FAFC;">
+        <div style="font-size: 9.5pt; font-weight: 700; color: #1E3A8A; text-transform: uppercase; margin-bottom: 6pt; border-bottom: 1.5pt solid #DBEAFE; padding-bottom: 4pt;">
+          4. GOVERNANCE &amp; OPS
+        </div>
+        <div style="font-size: 8.5pt; color: #475569; line-height: 1.5;">
+          Leadership routines, QA protocols, resourcing, and digital infrastructure readiness.
+        </div>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div class="page-break" style="page-break-before: always; break-before: page;"></div>
+
+<h1>Chapter 4: Integrated Curriculum Ecosystem Architecture</h1>
+<p>The overarching framework converges statutory national standards with international benchmark frameworks into a cohesive learning ecosystem:</p>
+
+<div class="diagram-converging" style="margin: 20pt 0; width: 100%; border: 1.5pt solid #CBD5E1; border-radius: 8pt; background-color: #F8FAFC; padding: 16pt;">
+  <table style="width: 100%; border-collapse: separate; border-spacing: 12pt 0; border: none; margin-bottom: 8pt;">
+    <tr>
+      <td style="width: 48%; background-color: #EFF6FF; border: 1.5pt solid #3B82F6; border-radius: 6pt; padding: 12pt; vertical-align: top; text-align: center;">
+        <div style="font-size: 10.5pt; font-weight: 800; color: #1E40AF; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4pt;">
+          SAUDI NATIONAL CURRICULUM
+        </div>
+        <div style="font-size: 8.5pt; color: #475569; font-weight: 500;">
+          (Statutory Core &amp; Identity)
+        </div>
+      </td>
+      <td style="width: 48%; background-color: #F0FDF4; border: 1.5pt solid #22C55E; border-radius: 6pt; padding: 12pt; vertical-align: top; text-align: center;">
+        <div style="font-size: 10.5pt; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4pt;">
+          INTERNATIONAL BENCHMARK FRAMEWORK
+        </div>
+        <div style="font-size: 8.5pt; color: #475569; font-weight: 500;">
+          (Pedagogy, Progression &amp; Rigour)
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <div style="text-align: center; margin: 4pt 0 10pt 0; color: #2563EB; font-size: 14pt; font-weight: bold; letter-spacing: 0.2em;">
+    ↘ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ⬇ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↙
+  </div>
+
+  <div style="background-color: #FFFFFF; border: 2pt solid #1E3A8A; border-radius: 6pt; overflow: hidden; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+    <div style="background-color: #1E3A8A; color: #FFFFFF; padding: 10pt 14pt; font-size: 11pt; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;">
+      ALKAWTHAR INTEGRATED CURRICULUM ECOSYSTEM
+    </div>
+    <div style="padding: 10pt 16pt; color: #334155; font-size: 9.5pt; line-height: 1.5; font-weight: 500;">
+      (Academically Rigorous, Culturally Grounded, and Globally Competitive KG-Y6)
+    </div>
+  </div>
 </div>`
   },
   {

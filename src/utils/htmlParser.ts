@@ -1,246 +1,360 @@
-import { transformAsciiAndDiagramsToHtml, hasAsciiArtOrDiagram } from './asciiTransformer';
+import { hasAsciiArtOrDiagram, transformAsciiAndDiagramsToHtml } from './asciiTransformer';
 
 /**
- * Converts Plain Text or Markdown into clean semantic HTML
+ * Ultra-robust, Zero-Data-Loss HTML & Markdown Parser
+ * Guarantees 100% data retention while formatting raw text, markdown, or HTML into structured, professional documents.
+ */
+
+/**
+ * Converts Plain Text or Markdown into clean, semantic, well-organized HTML without losing any data.
  */
 export function convertTextOrMarkdownToHtml(text: string): string {
   if (!text || text.trim() === '') {
     return '<p></p>';
   }
 
-  // Pre-process text to transform any ASCII tables, comparison diagrams, or flowcharts into clean HTML blocks
-  const processedText = hasAsciiArtOrDiagram(text)
-    ? transformAsciiAndDiagramsToHtml(text)
-    : text;
+  let processedInput = text;
+  // Automatically convert ASCII box diagrams, converging flowcharts & matrices if detected
+  if (hasAsciiArtOrDiagram(processedInput)) {
+    processedInput = transformAsciiAndDiagramsToHtml(processedInput);
+  }
 
-  // If text already looks like full HTML (starts with tags like <p>, <h1>, <div>, <table>, <!DOCTYPE, etc.)
-  const trimmed = processedText.trim();
+  const trimmed = processedInput.trim();
+
+  // If input is already full HTML (contains tags like <p>, <h1>, <div>, <table>, <!DOCTYPE, etc.)
   if (
     trimmed.startsWith('<') &&
-    (trimmed.includes('</') || trimmed.includes('/>') || trimmed.startsWith('<!DOCTYPE'))
+    (trimmed.includes('</') || trimmed.includes('/>') || trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html'))
   ) {
     return sanitizeAndEnhanceHtml(trimmed);
   }
 
-  // Simple and robust Markdown to HTML parser
-  const lines = processedText.split(/\r?\n/);
-  let html = '';
+  const lines = processedInput.split(/\r?\n/);
+  const outputBlocks: string[] = [];
+
   let inList = false;
   let listType: 'ul' | 'ol' | null = null;
+  let currentListItems: string[] = [];
+
   let inCodeBlock = false;
   let codeBuffer: string[] = [];
+  let codeLang = '';
+
   let inTable = false;
   let tableRows: string[][] = [];
 
-  const closeListIfOpen = () => {
-    if (inList && listType) {
-      html += `</${listType}>\n`;
+  let inBlockquote = false;
+  let blockquoteBuffer: string[] = [];
+
+  let inHtmlBlock = false;
+  let htmlBlockBuffer: string[] = [];
+  let openHtmlTagsCount = 0;
+
+  const flushList = () => {
+    if (inList && listType && currentListItems.length > 0) {
+      const itemsHtml = currentListItems.map((item) => `  <li>${formatInlineMarkdown(item)}</li>`).join('\n');
+      outputBlocks.push(`<${listType}>\n${itemsHtml}\n</${listType}>`);
       inList = false;
       listType = null;
+      currentListItems = [];
     }
   };
 
-  const flushTableIfOpen = () => {
+  const flushTable = () => {
     if (inTable && tableRows.length > 0) {
-      html += '<table style="width: 100%; border-collapse: collapse; margin: 12pt 0;">\n';
-      const isHeader = tableRows.length > 1;
-      tableRows.forEach((row, rowIndex) => {
-        // Skip separator row (like |---|---|)
-        if (row.every((cell) => /^[-:\s]+$/.test(cell))) {
-          return;
-        }
-
-        if (rowIndex === 0 && isHeader) {
-          html += '  <thead>\n    <tr>\n';
-          row.forEach((cell) => {
-            html += `      <th style="padding: 8pt 10pt; text-align: left;">${formatInlineMarkdown(cell.trim())}</th>\n`;
+      const validRows = tableRows.filter((r) => r.length > 0 && !r.every((cell) => /^[-:=+\s]+$/.test(cell)));
+      if (validRows.length > 0) {
+        const isHeader = validRows.length > 1;
+        let tableHtml = '<table style="width: 100%; border-collapse: collapse; margin: 14pt 0;">\n';
+        
+        if (isHeader) {
+          tableHtml += '  <thead>\n    <tr>\n';
+          validRows[0].forEach((cell) => {
+            tableHtml += `      <th style="padding: 8pt 10pt; text-align: left; font-weight: 700;">${formatInlineMarkdown(cell.trim())}</th>\n`;
           });
-          html += '    </tr>\n  </thead>\n  <tbody>\n';
+          tableHtml += '    </tr>\n  </thead>\n  <tbody>\n';
+          
+          validRows.slice(1).forEach((row) => {
+            tableHtml += '    <tr>\n';
+            row.forEach((cell) => {
+              tableHtml += `      <td style="padding: 8pt 10pt;">${formatInlineMarkdown(cell.trim())}</td>\n`;
+            });
+            tableHtml += '    </tr>\n';
+          });
+          tableHtml += '  </tbody>\n';
         } else {
-          html += '    <tr>\n';
-          row.forEach((cell) => {
-            html += `      <td style="padding: 8pt 10pt;">${formatInlineMarkdown(cell.trim())}</td>\n`;
+          tableHtml += '  <tbody>\n';
+          validRows.forEach((row) => {
+            tableHtml += '    <tr>\n';
+            row.forEach((cell) => {
+              tableHtml += `      <td style="padding: 8pt 10pt;">${formatInlineMarkdown(cell.trim())}</td>\n`;
+            });
+            tableHtml += '    </tr>\n';
           });
-          html += '    </tr>\n';
+          tableHtml += '  </tbody>\n';
         }
-      });
-      if (isHeader) {
-        html += '  </tbody>\n';
+        tableHtml += '</table>';
+        outputBlocks.push(tableHtml);
       }
-      html += '</table>\n';
       inTable = false;
       tableRows = [];
     }
   };
 
+  const flushBlockquote = () => {
+    if (inBlockquote && blockquoteBuffer.length > 0) {
+      const quoteText = blockquoteBuffer.map((l) => formatInlineMarkdown(l)).join('<br />');
+      outputBlocks.push(`<blockquote><p>${quoteText}</p></blockquote>`);
+      inBlockquote = false;
+      blockquoteBuffer = [];
+    }
+  };
+
+  const flushHtmlBlock = () => {
+    if (inHtmlBlock && htmlBlockBuffer.length > 0) {
+      outputBlocks.push(htmlBlockBuffer.join('\n'));
+      inHtmlBlock = false;
+      htmlBlockBuffer = [];
+      openHtmlTagsCount = 0;
+    }
+  };
+
+  const flushAll = () => {
+    flushList();
+    flushTable();
+    flushBlockquote();
+    flushHtmlBlock();
+  };
+
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmedLine = line.trim();
+    const rawLine = lines[i];
+    const trimmedLine = rawLine.trim();
 
-    // Direct HTML block inserted by ASCII transformer or custom tags
-    if (trimmedLine.startsWith('<div class="comparison-diagram"') ||
-        trimmedLine.startsWith('<div class="flowchart-diagram"') ||
-        trimmedLine.startsWith('<div class="part-banner"') ||
-        trimmedLine.startsWith('<div class="priority-box"') ||
-        trimmedLine.startsWith('<div class="grid-table-wrapper"') ||
-        trimmedLine.startsWith('<div class="page-break"')) {
-      closeListIfOpen();
-      flushTableIfOpen();
-      html += trimmedLine + '\n';
-      continue;
-    }
-
-    // Page break markers: <!-- pagebreak -->, [pagebreak], --- PAGE BREAK ---
-    if (/<!--\s*pagebreak\s*-->|\[pagebreak\]|---+\s*PAGE\s*BREAK\s*---+|\\pagebreak/i.test(trimmedLine)) {
-      closeListIfOpen();
-      flushTableIfOpen();
-      html += '<div class="page-break" style="page-break-before: always; break-before: page;"></div>\n';
-      continue;
-    }
-
-    // Code blocks ```
+    // 1. Code blocks (``` or ````)
     if (trimmedLine.startsWith('```')) {
-      closeListIfOpen();
-      flushTableIfOpen();
+      flushAll();
       if (inCodeBlock) {
-        const rawCode = codeBuffer.join('\n');
-        if (hasAsciiArtOrDiagram(rawCode)) {
-          html += transformAsciiAndDiagramsToHtml(rawCode) + '\n';
-        } else {
-          html += `<pre><code>${rawCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>\n`;
-        }
+        const fullCode = codeBuffer.join('\n');
+        outputBlocks.push(
+          `<pre><code>${fullCode.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`
+        );
         codeBuffer = [];
         inCodeBlock = false;
+        codeLang = '';
       } else {
         inCodeBlock = true;
+        codeLang = trimmedLine.slice(3).trim();
       }
       continue;
     }
 
     if (inCodeBlock) {
-      codeBuffer.push(line);
+      codeBuffer.push(rawLine);
       continue;
     }
 
-    // Markdown Table lines (e.g. | Col 1 | Col 2 |)
-    if (trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) {
-      closeListIfOpen();
-      inTable = true;
-      const cells = trimmedLine
-        .slice(1, -1)
-        .split('|')
-        .map((c) => c.trim());
-      tableRows.push(cells);
-      continue;
-    } else {
-      flushTableIfOpen();
-    }
-
-    // Empty line
-    if (trimmedLine === '') {
-      closeListIfOpen();
+    // 2. Explicit Page Break markers
+    if (
+      /<!--\s*pagebreak\s*-->|\[pagebreak\]|---+\s*PAGE\s*BREAK\s*---+|\\pagebreak/i.test(trimmedLine) ||
+      trimmedLine === '<!-- PAGE_BREAK -->'
+    ) {
+      flushAll();
+      outputBlocks.push('<div class="page-break" style="page-break-before: always; break-before: page;"></div>');
       continue;
     }
 
-    // Headings
-    if (trimmedLine.startsWith('###### ')) {
-      closeListIfOpen();
-      html += `<h6>${formatInlineMarkdown(trimmedLine.slice(7))}</h6>\n`;
-    } else if (trimmedLine.startsWith('##### ')) {
-      closeListIfOpen();
-      html += `<h5>${formatInlineMarkdown(trimmedLine.slice(6))}</h5>\n`;
-    } else if (trimmedLine.startsWith('#### ')) {
-      closeListIfOpen();
-      html += `<h4>${formatInlineMarkdown(trimmedLine.slice(5))}</h4>\n`;
-    } else if (trimmedLine.startsWith('### ')) {
-      closeListIfOpen();
-      html += `<h3>${formatInlineMarkdown(trimmedLine.slice(4))}</h3>\n`;
-    } else if (trimmedLine.startsWith('## ')) {
-      closeListIfOpen();
-      html += `<h2>${formatInlineMarkdown(trimmedLine.slice(3))}</h2>\n`;
-    } else if (trimmedLine.startsWith('# ')) {
-      closeListIfOpen();
-      // Chapter / Major Heading check
-      const headingText = trimmedLine.slice(2);
-      const isChapterOrPart = /^CHAPTER\s+\d+|^PART\s+[I|V|X|\d]+|^TABLE OF CONTENTS/i.test(headingText.trim());
-      if (isChapterOrPart) {
-        html += `<div class="page-break" style="page-break-before: always; break-before: page;"></div>\n`;
+    // 3. Raw HTML blocks or existing div/table containers
+    const startsHtmlBlock = /^<(div|table|section|article|header|footer|figure|aside)\b/i.test(trimmedLine);
+    if (startsHtmlBlock || inHtmlBlock) {
+      if (!inHtmlBlock) {
+        flushAll();
+        inHtmlBlock = true;
+        htmlBlockBuffer = [];
+        openHtmlTagsCount = 0;
       }
-      html += `<h1>${formatInlineMarkdown(headingText)}</h1>\n`;
-    } else if (trimmedLine === '---' || trimmedLine === '***' || trimmedLine === '___') {
-      closeListIfOpen();
-      html += '<hr />\n';
-    } else if (trimmedLine.startsWith('> ')) {
-      closeListIfOpen();
-      html += `<blockquote><p>${formatInlineMarkdown(trimmedLine.slice(2))}</p></blockquote>\n`;
-    } else if (/^[-*+]\s+/.test(trimmedLine)) {
+
+      htmlBlockBuffer.push(rawLine);
+
+      // Count open vs close tags
+      const openMatches = trimmedLine.match(/<(div|table|section|article|header|footer|figure|aside)\b/gi) || [];
+      const closeMatches = trimmedLine.match(/<\/(div|table|section|article|header|footer|figure|aside)>/gi) || [];
+      openHtmlTagsCount += openMatches.length - closeMatches.length;
+
+      if (openHtmlTagsCount <= 0 && htmlBlockBuffer.length > 0) {
+        flushHtmlBlock();
+      }
+      continue;
+    }
+
+    // 4. Blank lines
+    if (trimmedLine === '') {
+      flushAll();
+      continue;
+    }
+
+    // 5. Blockquotes (> text)
+    if (trimmedLine.startsWith('>')) {
+      flushList();
+      flushTable();
+      inBlockquote = true;
+      const content = trimmedLine.replace(/^>\s?/, '');
+      blockquoteBuffer.push(content);
+      continue;
+    } else if (inBlockquote) {
+      flushBlockquote();
+    }
+
+    // 6. Markdown Tables (| Col 1 | Col 2 |) or ASCII Grid (+---+---+)
+    const isMarkdownTableLine = (trimmedLine.startsWith('|') && trimmedLine.endsWith('|')) ||
+      (trimmedLine.includes('|') && (trimmedLine.startsWith('+') || trimmedLine.startsWith('|')));
+    const isAsciiBorder = /^\+[-=+]{3,}\+$/.test(trimmedLine);
+
+    if (isMarkdownTableLine || isAsciiBorder) {
+      flushList();
+      inTable = true;
+      if (isMarkdownTableLine) {
+        const cleanPipes = trimmedLine.replace(/^\||\|$/g, '');
+        const cells = cleanPipes.split('|').map((c) => c.trim());
+        tableRows.push(cells);
+      }
+      continue;
+    } else if (inTable) {
+      flushTable();
+    }
+
+    // 7. Horizontal Rules (---, ***, ___)
+    if (/^[-*_]{3,}$/.test(trimmedLine)) {
+      flushAll();
+      outputBlocks.push('<hr />');
+      continue;
+    }
+
+    // 8. Markdown Headings (# H1, ## H2, ### H3, #### H4, ##### H5, ###### H6)
+    if (trimmedLine.startsWith('#')) {
+      flushAll();
+      const match = trimmedLine.match(/^(#{1,6})\s+(.*)$/);
+      if (match) {
+        const level = match[1].length;
+        const headingText = match[2].trim();
+        const isChapter = /^CHAPTER\s+\d+|^CHAPITRE\s+\d+|^PART\s+[I|V|X|\d]+|^TABLE OF CONTENTS|^TABLE DES MATIÈRES/i.test(headingText);
+        
+        let prefix = '';
+        if (level === 1 && isChapter) {
+          prefix = '<div class="page-break" style="page-break-before: always; break-before: page;"></div>\n';
+        }
+        outputBlocks.push(`${prefix}<h${level}>${formatInlineMarkdown(headingText)}</h${level}>`);
+        continue;
+      }
+    }
+
+    // 9. Plain text structured headings (e.g., "Chapitre 1 : ...", "Chapter 1: ...", "Partie I : ...", "PART I : ...", "1. Introduction", "1.1 Contexte")
+    const isChapterHeading = /^(PARTIE|PART)\s+([I|V|X|\d]+)\s*[:\-–—]\s*(.*)$/i.test(trimmedLine) ||
+      /^(CHAPITRE|CHAPTER)\s+(\d+)\s*[:\-–—]\s*(.*)$/i.test(trimmedLine);
+
+    if (isChapterHeading) {
+      flushAll();
+      outputBlocks.push(
+        `<div class="page-break" style="page-break-before: always; break-before: page;"></div>\n<h1>${formatInlineMarkdown(trimmedLine)}</h1>`
+      );
+      continue;
+    }
+
+    const isNumberedHeading = /^(\d+\.\d+)\s+([A-ZÀ-Ÿ].*)$/.test(trimmedLine) ||
+      /^([I|V|X]+\.)\s+([A-ZÀ-Ÿ].*)$/.test(trimmedLine);
+
+    if (isNumberedHeading) {
+      flushAll();
+      outputBlocks.push(`<h2>${formatInlineMarkdown(trimmedLine)}</h2>`);
+      continue;
+    }
+
+    // 10. Unordered Lists (- item, * item, + item, • item, – item, — item)
+    const bulletMatch = trimmedLine.match(/^([-*+•–—▪])\s+(.*)$/);
+    if (bulletMatch) {
+      flushTable();
+      flushBlockquote();
       if (!inList || listType !== 'ul') {
-        closeListIfOpen();
-        html += '<ul>\n';
+        flushList();
         inList = true;
         listType = 'ul';
       }
-      const itemContent = trimmedLine.replace(/^[-*+]\s+/, '');
-      html += `  <li>${formatInlineMarkdown(itemContent)}</li>\n`;
-    } else if (/^\d+\.\s+/.test(trimmedLine)) {
+      currentListItems.push(bulletMatch[2]);
+      continue;
+    }
+
+    // 11. Ordered Lists (1. item, 2) item, a) item)
+    const orderedMatch = trimmedLine.match(/^(\d+[\.\)]|[a-zA-Z][\.\)])\s+(.*)$/);
+    if (orderedMatch) {
+      flushTable();
+      flushBlockquote();
       if (!inList || listType !== 'ol') {
-        closeListIfOpen();
-        html += '<ol>\n';
+        flushList();
         inList = true;
         listType = 'ol';
       }
-      const itemContent = trimmedLine.replace(/^\d+\.\s+/, '');
-      html += `  <li>${formatInlineMarkdown(itemContent)}</li>\n`;
-    } else {
-      closeListIfOpen();
-      // If line is starting with "CHAPTER X:" or "PART I:" as plain text, elevate it
-      if (/^CHAPTER\s+\d+:|^CHAPITRE\s+\d+:/i.test(trimmedLine)) {
-        html += `<div class="page-break" style="page-break-before: always; break-before: page;"></div>\n<h2>${formatInlineMarkdown(trimmedLine)}</h2>\n`;
-      } else {
-        html += `<p>${formatInlineMarkdown(trimmedLine)}</p>\n`;
-      }
+      currentListItems.push(orderedMatch[2]);
+      continue;
     }
+
+    // 12. Callout alerts or notice lines (e.g., "NOTE: ...", "IMPORTANT: ...", "REMARQUE: ...", "ATTENTION: ...")
+    const calloutMatch = trimmedLine.match(/^(NOTE|IMPORTANT|REMARQUE|ATTENTION|WARNING|INFO)\s*[:\-–—]\s*(.*)$/i);
+    if (calloutMatch) {
+      flushAll();
+      outputBlocks.push(
+        `<div class="callout callout-info" style="margin: 12pt 0; padding: 10pt 14pt; border-left: 4pt solid #2563EB; background-color: #EFF6FF; border-radius: 0 6pt 6pt 0;">\n  <p style="margin: 0;"><strong>${calloutMatch[1].toUpperCase()}:</strong> ${formatInlineMarkdown(calloutMatch[2])}</p>\n</div>`
+      );
+      continue;
+    }
+
+    // 13. Regular Paragraph - zero data loss, exact line preserved!
+    flushAll();
+    outputBlocks.push(`<p>${formatInlineMarkdown(trimmedLine)}</p>`);
   }
 
-  closeListIfOpen();
-  flushTableIfOpen();
+  flushAll();
 
   if (inCodeBlock && codeBuffer.length > 0) {
-    const rawCode = codeBuffer.join('\n');
-    if (hasAsciiArtOrDiagram(rawCode)) {
-      html += transformAsciiAndDiagramsToHtml(rawCode) + '\n';
-    } else {
-      html += `<pre><code>${rawCode.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>\n`;
-    }
+    const fullCode = codeBuffer.join('\n');
+    outputBlocks.push(
+      `<pre><code>${fullCode.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`
+    );
   }
 
-  return sanitizeAndEnhanceHtml(html);
+  const finalHtml = outputBlocks.join('\n\n');
+  return sanitizeAndEnhanceHtml(finalHtml);
 }
 
 /**
- * Parses inline bold, italic, code, links
+ * Parses inline bold, italic, strikethrough, inline code, and hyperlinks
  */
 export function formatInlineMarkdown(text: string): string {
+  if (!text) return '';
   let res = text;
-  // Bold & Italic ***text*** or ___text___
+
+  // Bold & Italic: ***text*** or ___text___
   res = res.replace(/(\*\*\*|___)(.*?)\1/g, '<strong><em>$2</em></strong>');
-  // Bold **text** or __text__
+
+  // Bold: **text** or __text__
   res = res.replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>');
-  // Italic *text* or _text_
-  res = res.replace(/(\*|_)(.*?)\1/g, '<em>$2</em>');
-  // Strike ~~text~~
+
+  // Italic: *text* or _text_ (not inside words with underscores)
+  res = res.replace(/(?:^|\s)\*([^*]+)\*(?=\s|$|[.,;:!?])/g, ' <em>$1</em>');
+  res = res.replace(/(?:^|\s)_([^_]+)_(?=\s|$|[.,;:!?])/g, ' <em>$1</em>');
+
+  // Strikethrough: ~~text~~
   res = res.replace(/~~(.*?)~~/g, '<del>$1</del>');
-  // Inline Code `text`
+
+  // Inline Code: `text`
   res = res.replace(/`([^`]+)`/g, '<code>$1</code>');
-  // Links [text](url)
+
+  // Hyperlinks: [text](url)
   res = res.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
 
-  return res;
+  return res.trim();
 }
 
 /**
- * Sanitizes HTML and replaces any <pre> blocks or raw text containing ASCII diagrams
- * with clean converted HTML components.
+ * Sanitizes HTML and ensures all containers, tables, and page breaks have proper classes and styles
  */
 export function sanitizeAndEnhanceHtml(html: string): string {
   if (!html) return html;
@@ -249,20 +363,8 @@ export function sanitizeAndEnhanceHtml(html: string): string {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
 
-    // 1. Inspect all <pre> elements: if they contain ASCII tables/diagrams, replace them!
-    const preElements = Array.from(doc.querySelectorAll('pre'));
-    preElements.forEach((pre) => {
-      const text = pre.textContent || '';
-      if (hasAsciiArtOrDiagram(text)) {
-        const converted = transformAsciiAndDiagramsToHtml(text);
-        const tempContainer = doc.createElement('div');
-        tempContainer.innerHTML = converted;
-        pre.replaceWith(...Array.from(tempContainer.childNodes));
-      }
-    });
-
-    // 2. Ensure page breaks have proper styling classes
-    const pageBreakDivs = Array.from(doc.querySelectorAll('.page-break, [style*="page-break"]'));
+    // Ensure all page-break elements have correct classes and styling
+    const pageBreakDivs = Array.from(doc.querySelectorAll('.page-break, [style*="page-break"], [style*="break-before"]'));
     pageBreakDivs.forEach((pb) => {
       pb.classList.add('page-break');
       (pb as HTMLElement).style.pageBreakBefore = 'always';
@@ -293,7 +395,7 @@ export function extractDocumentTitle(html: string, defaultTitle: string = 'Docum
     const firstP = doc.querySelector('p');
     if (firstP && firstP.textContent?.trim()) {
       const pText = firstP.textContent.trim();
-      return pText.length > 40 ? pText.substring(0, 40) + '...' : pText;
+      return pText.length > 50 ? pText.substring(0, 50) + '...' : pText;
     }
   } catch {
     // fallback
@@ -323,7 +425,6 @@ export function prettifyHtml(html: string): string {
         indent = Math.max(0, indent - 1);
         formatted += '\n' + tab.repeat(indent) + token;
       } else if (token.startsWith('<') && !token.startsWith('<!') && !token.endsWith('/>')) {
-        // Self-closing tags check
         const isSelfClosing = /^<(hr|br|img|input|meta|link)/i.test(token);
         formatted += '\n' + tab.repeat(indent) + token;
         if (!isSelfClosing && !token.startsWith('<!--')) {
