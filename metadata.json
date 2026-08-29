@@ -1,0 +1,8 @@
+{
+  "name": "Docx & PDF Studio Converter",
+  "description": "Professional document converter for HTML, Markdown, and text into customizable Word (.docx) and A4 PDF documents with custom margins, typography, styled tables, color palettes, and dynamic headers/footers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
